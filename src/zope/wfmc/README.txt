@@ -924,7 +924,7 @@ Now, let's try out our process:
 
     >>> context = PublicationContext()
     >>> proc = Publication(context)
-    >>> proc.start('bob')
+    >>> proc.start({'author': 'bob'})
     ProcessStarted(Process('Publication'))
     Transition(None, Activity('Publication.start'))
     ActivityStarted(Activity('Publication.start'))

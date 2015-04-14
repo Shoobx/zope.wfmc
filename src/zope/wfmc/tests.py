@@ -123,9 +123,10 @@ def test_multiple_input_parameters():
     >>> integration.eekWorkItem = Eek
 
     >>> proc = pd()
-    >>> proc.start(99, 42)
+    >>> proc.start({'x': 99, 'y':42})
     99 42
     """
+
 
 def test_pickling():
     """
@@ -159,6 +160,7 @@ def test_pickling():
     >>> import pickle
     >>> s = pickle.dumps(proc)
     """
+
 
 def test_inputoutput():
     """
@@ -212,10 +214,11 @@ def test_inputoutput():
     >>> integration.eekWorkItem = Eek
 
     >>> proc = pd()
-    >>> proc.start(1)
+    >>> proc.start({'x':1})
     >>> proc.workflowRelevantData.x
     2
     """
+
 
 def test_wrong_number_process_args_error_message():
     """
@@ -235,11 +238,14 @@ def test_wrong_number_process_args_error_message():
     >>> pd.defineTransitions(process.TransitionDefinition('eek', 'ook'))
 
     >>> proc = pd()
-    >>> proc.start(1)
+
+    Invalid parameters will cause an exception to raise.
+    >>> proc.start({'x':1})
     Traceback (most recent call last):
-    ...
-    TypeError: Too many arguments. Expected 0. got 1
+    	...
+    ValueError: Invalid parameter x passed to process sample.
     """
+
 
 def test_process_abort():
     """

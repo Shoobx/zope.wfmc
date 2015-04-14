@@ -221,7 +221,7 @@ Now, let's try out our process.  We'll follow the same steps we did in
 
     >>> context = PublicationContext()
     >>> proc = pd(context)
-    >>> proc.start('bob')
+    >>> proc.start({'author': 'bob'})
     ProcessStarted(Process(u'Publication'))
     Transition(None, Activity(u'Publication.start'))
     ActivityStarted(Activity(u'Publication.start'))

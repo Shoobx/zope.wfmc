@@ -655,9 +655,11 @@ class Process(persistent.Persistent):
         except zope.component.interfaces.ComponentLookupError:
             return self._definiton
 
-    def start(self, *arguments):
+    def start(self, arguments=None):
         if self.isStarted:
             raise TypeError("Already started")
+        if arguments is None:
+            arguments = {}
 
         definition = self.definition
         data = self.workflowRelevantData
@@ -670,22 +672,26 @@ class Process(persistent.Persistent):
                 val = evaluator.evaluate(datafield.initialValue)
             setattr(data, id, val)
 
-        # Now apply input parameters on top of the defaults.
-        args = arguments
         inputparams = [p for p in definition.parameters if p.input]
+
+        # Now apply input parameters on top of the defaults.
         for parameter in inputparams:
-            if args:
-                arg, args = args[0], args[1:]
-            elif parameter.initialValue is not None:
+            arg = None
+            if parameter.__name__ in arguments:
+                arg = arguments[parameter.__name__]
+            elif parameter.initialValue:
                 arg = evaluator.evaluate(parameter.initialValue)
-            else:
-                __traceback_info__ = (self, args, definition.parameters)
-                raise ValueError(
-                    'Insufficient arguments passed to process.')
+            # not sure if it's worth warning when input
+            # params are not initialized...
             setattr(data, parameter.__name__, arg)
-        if args:
-            raise TypeError("Too many arguments. Expected %s. got %s" %
-                            (len(inputparams), len(arguments)))
+
+        inputnames = [p.__name__ for p in inputparams]
+        for name, _ in arguments.items():
+            if name not in inputnames:
+                raise ValueError(
+                    'Invalid parameter {} passed to process '
+                    '{}.'.format(
+                        name, self.process_definition_identifier))
 
         self.isStarted = True
         zope.event.notify(ProcessStarted(self))
@@ -967,8 +973,7 @@ class SubflowWorkItem(object):
                                            self.activity.id, self.id,
                                            proc_factory=self.processFactory)
         pd = subproc.definition
-        tupArgs = [args.get(p.__name__, None) for p in pd.parameters if p.input]
-        subproc.start(*tupArgs)
+        subproc.start(args)
 
 
 class WorkItemFinished(object):
