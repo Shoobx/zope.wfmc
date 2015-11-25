@@ -309,7 +309,7 @@ class Activity(persistent.Persistent):
         if hasattr(self, "definition") and \
                 self.definition.andJoinSetting and \
                 not self.process.has_join_revert_data(self.definition):
-            self.process.set_join_revert_data(self.definition, 0)
+            self.process.set_join_count(self.definition, 0)
 
         self.deadlines = []
         for deadlinedef in self.definition.deadlines:
@@ -447,8 +447,10 @@ class Activity(persistent.Persistent):
                     "while waiting for and completion"
                     % (transition, transition.id))
             self.incoming += (transition, )
-            if self.process.get_join_revert_data(self.definition) + \
-                    len(self.incoming) < len(definition.incoming):
+            count = self.process.get_join_count(self.definition)
+            count += 1
+            self.process.set_join_count(self.definition, count)
+            if count < len(definition.incoming):
                 # Tells us whether or not we need to wait
                 # for enough transitions at an add-joint, specifically for
                 # the case where we revert back through the joint and want to
@@ -543,16 +545,13 @@ class Activity(persistent.Persistent):
         for deadline in self.deadlines:
             self.process.deadlineCanceller(deadline)
 
-        if self.definition.andJoinSetting:
-            self.process.set_join_revert_data(self.definition, 0)
-
     def abort(self, cancelDeadlineTimer=True):
         # Revert all finished workitems first
         self.revert(cancelDeadlineTimer=cancelDeadlineTimer)
 
         # Join activites abortion should result in waiting next time
         if self.definition.andJoinSetting:
-            self.process.set_join_revert_data(self.definition, 0)
+            self.process.set_join_count(self.definition, 0)
 
         # Abort all workitems.
         for workitem, app, formal, actual in self.workitems.values():
@@ -596,8 +595,8 @@ class Activity(persistent.Persistent):
             # activities since the number of reverts can not be smaller
             # then the 1 minus the number of in because the activity is
             # removed from the map.
-            new_num = len(self.definition.incoming) - 1
-            self.process.set_join_revert_data(self.definition, new_num)
+            count = self.process.get_join_count(self.definition)
+            self.process.set_join_count(self.definition, count - 1)
         zope.event.notify(ActivityReverted(self))
 
         return reverted_workitems
@@ -787,7 +786,7 @@ class Process(persistent.Persistent):
         self.subflows.append(subflow)
         return subflow
 
-    def get_join_revert_data(self, act_def):
+    def get_join_count(self, act_def):
         if act_def.andJoinSetting:
             join_reverts = "join_reverts_"+act_def.id
             if hasattr(self.applicationRelevantData, join_reverts):
@@ -797,7 +796,7 @@ class Process(persistent.Persistent):
         else:
             raise TypeError("The activity %s is not an andJoin." % act_def.id)
 
-    def set_join_revert_data(self, act_def, value):
+    def set_join_count(self, act_def, value):
         if act_def.andJoinSetting:
             join_reverts = "join_reverts_"+act_def.id
             setattr(self.applicationRelevantData, join_reverts, value)
@@ -833,7 +832,7 @@ class Process(persistent.Persistent):
         activity.process.transition(activity, transitions)
 
         if activity.definition.andJoinSetting:
-            self.set_join_revert_data(activity.definition, 0)
+            self.set_join_count(activity.definition, 0)
 
 
 class ProcessStarted:
